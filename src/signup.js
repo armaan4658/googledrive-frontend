@@ -2,10 +2,13 @@ import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as Yup from "yup";
 import TextField from '@material-ui/core/TextField';
-import { useHistory } from "react-router-dom";
-import Grid from '@material-ui/core/Grid';
+import Paper from '@material-ui/core/Paper';
+import Button from '@material-ui/core/Button';
+import Link from '@material-ui/core/Link';
+import {Link as Connect} from "react-router-dom";
+import {useState} from 'react';
+import LinearProgress from '@material-ui/core/LinearProgress';
 export function SignUp(){
-    let history = useHistory();
     const validationSchema = Yup.object().shape({
         firstName: Yup.string().required('First name is required'),
         lastName:Yup.string().required('Last name is required'),
@@ -21,23 +24,40 @@ export function SignUp(){
         handleSubmit,
         formState : {errors}
     } = useForm({resolver : yupResolver(validationSchema)});
-    const onSubmit = (data) =>{
-        console.log(data);
-        fetch('https://google-drive-ak-back-end.herokuapp.com/signup',{
+    const [msg,setMsg] = useState("");
+    const [loading,setLoading] = useState("none");
+    const signupFunction = (data) => {
+        fetch('https://google-drive-ak-back-end.herokuapp.com/user/signup',{
             method:'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body:JSON.stringify(data)
         }).then(res=>res.json())
-        .then(res=>history.push('/login'));
-        
+        .then(res=>setMsg(res.message))
+        .then(res=>setLoading("none"))
+        .catch(res=>console.log(res))
     }
+    const onSubmit = (data) =>{
+        setLoading("block");
+        signupFunction(data);
+    }
+    const hideMsg = () => {
+        setTimeout(() => setMsg(""), 1000*10);
+    }
+    
     return(
-        <Grid>
-            <Grid item xs={12} sm={12} md={12} lg={12} xl={12} >
-                <form onSubmit={handleSubmit(onSubmit)} style={{display:'grid',justifyContent:'center',alignContent:'center'}}>
+        <div style={{display:'grid',placeItems:'center'}}>
+            <Paper variant="outlined" id="signup">
+                <form onSubmit={handleSubmit(onSubmit)} style={{display:'grid',gap:'10px'}}>
+                    <span style={{display:loading}}> <LinearProgress/> </span>
                     <h1>Sign Up</h1>
+                    {msg==="green"?(
+                        <p>Verification link has been sent to your email</p>
+                    ):(
+                        <p>{msg}</p>
+                    )}
+                    {msg?hideMsg():""}
                     <TextField {...register("firstName")} 
                     id="outlined-basic" label="Enter your first name" 
                     variant="outlined"/>
@@ -71,9 +91,14 @@ export function SignUp(){
                     {errors.confirmPassword && (
                         <span style={{ color: "crimson" }}> {errors.confirmPassword.message} </span>
                     )}
-                    <TextField type="submit"/>
+                    <Button type="submit" variant="contained" color="primary"> Submit </Button>
+                    <Link>
+                        <Connect to="/">
+                        Already have an account ? Login
+                        </Connect>
+                    </Link>
                 </form>
-            </Grid>
-        </Grid>
+            </Paper>
+        </div>
     )
 }

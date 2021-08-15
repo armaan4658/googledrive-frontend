@@ -1,11 +1,16 @@
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as Yup from "yup";
+import { useState} from "react";
 import { makeStyles } from '@material-ui/core/styles';
 import TextField from '@material-ui/core/TextField';
 import Button from '@material-ui/core/Button';
 import { useHistory } from "react-router-dom";
-import Grid from '@material-ui/core/Grid';
+import LinearProgress from '@material-ui/core/LinearProgress';
+import Paper from '@material-ui/core/Paper';
+import Link from '@material-ui/core/Link';
+import {Link as Connect} from "react-router-dom";
+import axios from "axios";
 
 export const useStyles = makeStyles((theme) => ({
     root: {
@@ -16,7 +21,9 @@ export const useStyles = makeStyles((theme) => ({
     },
   }));  
 export function LogIn(){
-    let history = useHistory();
+    const history = useHistory();
+    const [loading,setLoading] = useState("none");
+    const [msg,setMsg] = useState("");
     const validationSchema = Yup.object().shape({
         email:Yup.string().required('Email is required'),
         password:Yup.string().required('Password is required')
@@ -26,22 +33,34 @@ export function LogIn(){
         handleSubmit,
         formState: {errors}
     } = useForm({resolver:yupResolver(validationSchema)});
-    const onSubmit = (data) =>{
-        fetch('https://google-drive-ak-back-end.herokuapp.com/login',{
-            method:'POST',
-            headers:{
-                'Content-Type':'application/json'
-            },
-            body:JSON.stringify(data)
-        }).then(res=>res.json())
-        .then(res=>history.push('/drive'))
-
+    const loginFunction =async (data) => {
+        axios.post('https://google-drive-ak-back-end.herokuapp.com/user/login',data,{withCredentials:true})
+        .then(res=>{
+            if(res.data){
+                setLoading("none");
+                setMsg(res.data.message);
+            }
+            if(res.data.message==="green"){
+                localStorage.setItem("_id",res.data._id);
+                history.push('/drive');
+            }
+        })
+        .catch(res=>console.log(res))
+        
     }
+    const onSubmit = (data) =>{
+        setLoading("block");
+        loginFunction(data); 
+    }
+    const hideMsg = () => {
+        setTimeout(() => setMsg(""), 1000*10);
+    }
+    
     return(
-        <Grid>
-            {/* <Grid item xs={1} sm={1} md={2} lg={3} xl={3}></Grid> */}
-            <Grid item xs={12} sm={12} md={12} lg={12} xl={12} >
-                <form onSubmit={handleSubmit(onSubmit)} style={{display:'grid',justifyContent:'center',alignContent:'center'}}>
+        <div style={{display:'grid',placeItems:'center'}}>
+            <Paper variant="outlined" id="login">
+                <form onSubmit={handleSubmit(onSubmit)}style={{display:'grid',gap:'10px'}}>
+                    <span style={{display:loading}}> <LinearProgress/> </span>
                     <h1>Log In</h1>
                     <TextField  {...register("email")} 
                     type="email" 
@@ -57,22 +76,25 @@ export function LogIn(){
                     {errors.password && (
                         <span style={{ color: "crimson" }}> {errors.password.message} </span>
                     )}
-                    <TextField  type="submit"/>
-                    <Button variant="contained" color="primary" onClick={()=>{
-                        history.push('/signup');
-                    }}>
+                    <Button type="submit" variant="contained" color="primary">Submit</Button>
+                    <Link>
+                        <Connect to="/signup">
                         Sign Up
-                    </Button>
-                    <Button variant="contained" color="primary" onClick={()=>{
-                        history.push('/forgotpassword');
-                    }}>
+                        </Connect>
+                    </Link>
+                    <Link>
+                        <Connect to="/forgotpassword">
                         Forgot password
-                    </Button>
+                        </Connect>
+                    </Link>
+                    {msg!=="green"?(
+                        <p>{msg}</p>
+                    ):(
+                        <p></p>
+                    )}
+                    {msg?hideMsg():""}
                 </form>
-            </Grid>
-            {/* <Grid item xs={1} sm={1} md={2} lg={3} xl={3}></Grid> */}
-        
-        
-        </Grid>
+            </Paper>
+        </div>
     )
 }

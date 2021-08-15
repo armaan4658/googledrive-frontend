@@ -4,14 +4,15 @@ import * as Yup from "yup";
 import TextField from '@material-ui/core/TextField';
 import Paper from '@material-ui/core/Paper';
 import Button from '@material-ui/core/Button';
-import Link from '@material-ui/core/Link';
-import {Link as Connect} from "react-router-dom";
+import {useParams} from "react-router-dom";
 import LinearProgress from '@material-ui/core/LinearProgress';
-import {useState} from 'react';
+import {useEffect, useState} from 'react';
+import axios from "axios";
 
-export function ForgotPassword(){
+export function Verify(){
+    const {id} = useParams()
     const validationSchema = Yup.object().shape({
-        email:Yup.string().required('Email is required')
+        otp:Yup.string().required('Otp need to be entered to verify')
     });
     const{
         register,
@@ -20,14 +21,32 @@ export function ForgotPassword(){
     } = useForm({resolver:yupResolver(validationSchema)});
     const [loading,setLoading] = useState("none");
     const [msg,setMsg] = useState("");
+    const [email,setEmail] = useState("");
     const onSubmit = (data) =>{
+        const DataSend = {
+            "otp":data.otp,
+            "email":email
+        }
         setLoading("block");
-        fetch(`https://google-drive-ak-back-end.herokuapp.com/user/forgotpassword/${data.email}`,{
+        axios.patch(`https://google-drive-ak-back-end.herokuapp.com/user/otp`,DataSend)
+        .then(res=>{
+            if(res.data){
+                setLoading("none");
+                setMsg(res.data.message)
+            }
+        })
+        .catch(res=>console.log(res))
+    }
+    const getUserData = ()=>{
+        fetch(`https://google-drive-ak-back-end.herokuapp.com/user/get/${id}`,{
             method:'GET'
         }).then(res=>res.json())
-        .then(res=>setMsg(res.message))
-        .then(res=>setLoading("none"))
-        .catch(res=>console.log(res))
+        .then(res=>setEmail(res.email))
+    }
+    try{
+        useEffect(getUserData,[]);
+    }catch(e){
+        console.log(e)
     }
     const hideMsg = () => {
         setTimeout(() => setMsg(""), 1000*10);
@@ -37,23 +56,18 @@ export function ForgotPassword(){
             <Paper variant="outlined" id="forgotpassword">
                 <form onSubmit={handleSubmit(onSubmit)} style={{display:'grid',gap:'10px'}} >
                     <span style={{display:loading}}> <LinearProgress/> </span>
-                    <h1>Enter your email to get password reset link</h1>
-                    <TextField {...register("email")}
-                    type="email" 
-                    id="outlined-basic" label="Enter your email" 
+                    <h1>Enter otp to verify your account</h1>
+                    <TextField {...register("otp")}
+                    type="text" 
+                    id="outlined-basic" label="Enter your otp" 
                     variant="outlined"/>
-                    {errors.email && (
-                        <span style={{ color: "crimson" }}> {errors.email.message} </span>
+                    {errors.otp && (
+                        <span style={{ color: "crimson" }}> {errors.otp.message} </span>
                     )}
-                    <Button  type="submit" variant="contained" color="primary"> send password reset link </Button>
-                    <Link>
-                        <Connect to="/">
-                        remember password ? Login
-                        </Connect>
-                    </Link>
+                    <Button  type="submit" variant="contained" color="primary"> Verify </Button>
                     {msg?(
                         msg==="green"?(
-                            <p>password reset link has been sent to your email</p>
+                            <p>your account is verified</p>
                         ):(
                             <p> {msg} </p>
                         )
